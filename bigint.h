@@ -12,16 +12,18 @@ private:
     BigInteger(const int32_t&val);
     BigInteger(const int64_t&val);
     void set(const int32_t *words, const int32_t &len);
+    BigInteger canonicalize();
 
-    static BigInteger ONE;
-    static BigInteger ZERO;
-    static BigInteger TEN;
-    static int32_t NEGATIVE_ONE;
-    static int64_t NEGATIVE_ONE_64;
-    static int32_t CHARS_PER_WORD;
+    const static BigInteger ONE;
+    const static BigInteger ZERO;
+    const static BigInteger TEN;
+    const static int32_t NEGATIVE_ONE=-1;
+    const static int64_t NEGATIVE_ONE_64=0xFFFFFFFFLL;
+    const static int32_t CHARS_PER_WORD=9;
+    const static int32_t MIN_INT32=static_cast<int32_t>(0x80000000);
 
-    static BigInteger valueOf(int8_t *digits, const int &byte_len, const bool &negative);
-    static int32_t wordsNeeded(const int *words, const int &len);
+    static BigInteger valueOf(int8_t *digits, const int32_t &byte_len, const bool &negative);
+    static int32_t wordsNeeded(const int32_t *words, const int32_t &len);
     static BigInteger valueOf(const int64_t& val);
 
     /** Set dest[0:len-1] to the negation of src[0:len-1].
@@ -29,17 +31,44 @@ private:
     * Ok for src==dest. */
     static bool negate(int32_t *dest, int32_t *src, const int32_t &len);
 
+    /** Destructively set this to the negative of x.
+    * It is OK if x==this.*/
+    void setNegative(const BigInteger& x);
+
+    /** Add two BigIntegers, yielding their sum as another BigInteger. */
+    static BigInteger add(BigInteger x,BigInteger y,const int32_t&k);
+
     /** Make a canonicalized BigInteger from an array of words.
     * The array may be reused (without copying). */
     static BigInteger make(int32_t *words, const int32_t &len);
+
+    /** Add a BigInteger and an int, yielding a new BigInteger. */
+    static BigInteger add(const BigInteger&x,const int32_t&y);
+
+    /** Add two ints, yielding a BigInteger. */
+    static BigInteger add(const int32_t&x,const int32_t& y);
+
+    /** Set this to the sum of x and y.
+     * OK if x==this. */
+    void setAdd(const BigInteger &x,const int32_t& y);
+
+    static BigInteger neg(const BigInteger& x);
+    static BigInteger times(const BigInteger& x,int32_t y);
+    static BigInteger times(const BigInteger&x,const BigInteger& y);
 public:
     BigInteger();
     ~BigInteger();
     BigInteger(const BigInteger&val);
     BigInteger(const char* val);
     BigInteger operator=(const BigInteger&val);
+    BigInteger add(const BigInteger&val)const;
+    BigInteger subtract(const BigInteger& val)const;
+    BigInteger multiply(const BigInteger&val)const;
     bool isNegative()const;
     void show();
+
+    /** Destructively negate this. */
+    void setNegative();
 };
 
 #endif // BIGINT_H

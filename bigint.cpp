@@ -83,12 +83,9 @@ BigInteger::~BigInteger()
     delete [] this->words;
 }
 
-BigInteger BigInteger::ONE(1);
-BigInteger BigInteger::ZERO(0);
-BigInteger BigInteger::TEN(10);
-int32_t BigInteger::NEGATIVE_ONE=-1;
-int32_t BigInteger::CHARS_PER_WORD=9;
-int64_t BigInteger::NEGATIVE_ONE_64=0xFFFFFFFFLL;
+const BigInteger BigInteger::ONE(1);
+const BigInteger BigInteger::ZERO(0);
+const BigInteger BigInteger::TEN(10);
 
 bool BigInteger::isNegative() const
 {
@@ -103,7 +100,7 @@ void BigInteger::set(const int *words, const int &len)
     this->ival=len;
     delete [] this->words;
     this->words=new int[len];
-    memcpy(this->words,words,sizeof(int)*static_cast<size_t>(len));
+    memcpy(this->words,words,sizeof(int32_t)*static_cast<size_t>(len));
 }
 
 BigInteger::BigInteger(const int64_t&val)
@@ -114,7 +111,7 @@ BigInteger::BigInteger(const int64_t&val)
     this->words[1]=(val>>32)&NEGATIVE_ONE;
 }
 
-BigInteger BigInteger::valueOf(int8_t *digits, const int &byte_len, const bool &negative)
+BigInteger BigInteger::valueOf(int8_t *digits, const int32_t &byte_len, const bool &negative)
 {
     int32_t *words=new int32_t[byte_len/CHARS_PER_WORD+1];
     int32_t size=MPN::set_str(words,digits,byte_len);
@@ -151,7 +148,8 @@ BigInteger BigInteger::valueOf(const int64_t &val)
 void BigInteger::show()
 {
     for(int i=0;i<this->ival;i++)
-        printf("%08X\n",this->words[this->ival-i-1]);
+        printf("%08x",this->words[this->ival-i-1]);
+    printf("\n");
 }
 
 bool BigInteger::negate(int32_t *dest, int32_t *src, const int32_t &len)
@@ -169,7 +167,7 @@ bool BigInteger::negate(int32_t *dest, int32_t *src, const int32_t &len)
 
 BigInteger BigInteger::make(int32_t *words, const int32_t &len)
 {
-    if(words==NULL)
+    if(!words)
         return BigInteger(len);
     int32_t Len=wordsNeeded(words,len);
     if(Len<=1)
@@ -181,7 +179,7 @@ BigInteger BigInteger::make(int32_t *words, const int32_t &len)
     return ans;
 }
 
-int32_t BigInteger::wordsNeeded(const int *words, const int &len)
+int32_t BigInteger::wordsNeeded(const int32_t *words, const int32_t &len)
 {
     int i = len;
     if (i>0)
@@ -203,4 +201,252 @@ int32_t BigInteger::wordsNeeded(const int *words, const int &len)
         }
     }
     return i + 1;
+}
+
+BigInteger BigInteger::add(const BigInteger &x, const int32_t &y)
+{
+    if(!x.words)
+        return BigInteger::add(x.ival,y);
+    BigInteger ans=ZERO;
+    ans.setAdd(x,y);
+    return ans.canonicalize();
+}
+
+BigInteger BigInteger::add(const int32_t &x, const int32_t &y)
+{
+    return valueOf(static_cast<int64_t>(x)+static_cast<int64_t>(y));
+}
+
+void BigInteger::setAdd(const BigInteger &x, const int32_t &y)
+{
+    delete [] this->words;
+    if(!x.words)
+    {
+        *this=BigInteger::add(x.ival,y);
+        return;
+    }
+    this->words=new int32_t[x.ival+1];
+    int32_t temp=MPN::add_1(this->words,x.words,x.ival,y);
+    if(x.words[x.ival-1]<0)
+        temp--;
+    this->words[x.ival]=temp;
+    this->ival=wordsNeeded(words,x.ival+1);
+}
+
+BigInteger BigInteger::canonicalize()
+{
+    if(this->words&&
+            (this->ival=this->wordsNeeded(this->words,this->ival))<=1)
+    {
+        if(this->ival==1)
+            this->ival=this->words[0];
+        delete [] this->words;
+        this->words=NULL;
+    }
+    return *this;
+}
+
+BigInteger BigInteger::add(BigInteger x, BigInteger y, const int32_t &k)
+{
+    if(!x.words&&!y.words)
+    {
+        int64_t temp=static_cast<int64_t>(k)*static_cast<int64_t>(x.ival);
+        temp*=static_cast<int64_t>(y.ival);
+        return valueOf(temp);
+    }
+    if(k!=1)
+    {
+        if(-1==k)
+        {
+            y=BigInteger::neg(y);
+        }
+        else
+            y=BigInteger::times(y,valueOf(k));
+    }
+    if(!x.words)
+        return BigInteger::add(y,x.ival);
+    else if(!y.words)
+        return BigInteger::add(x,y.ival);
+
+    //Both are big
+    if(y.ival>x.ival)
+    {
+        //swap so that x is longer than y
+        int32_t temp=x.ival;
+        x.ival=y.ival;
+        y.ival=temp;
+
+        int32_t* tmp=x.words;
+        x.words=y.words;
+        y.words=tmp;
+    }
+
+    int32_t i=y.ival;
+    BigInteger ans=ZERO;
+    ans.words=new int32_t[x.ival+1];
+    int32_t cy_limb=MPN::add_n(ans.words,x.words,y.words,i);
+
+    int64_t carry=cy_limb;
+    int64_t y_ext=y.words[i-1]<0?NEGATIVE_ONE_64:0;
+    for(;i<x.ival;i++)
+    {
+        carry+=(static_cast<int64_t>(x.words[i])&NEGATIVE_ONE_64)+y_ext;
+        ans.words[i]=carry&NEGATIVE_ONE;
+        uint64_t temp=static_cast<uint64_t>(carry);
+        temp>>=32;
+        carry=static_cast<int64_t>(temp);
+    }
+    if(x.words[i-1]<0)
+        y_ext--;
+    ans.words[x.ival]=(carry+y_ext)&NEGATIVE_ONE;
+    ans.ival=x.ival+1;
+    return ans.canonicalize();
+}
+
+BigInteger BigInteger::add(const BigInteger &val) const
+{
+    return BigInteger::add(*this,val,1);
+}
+
+BigInteger BigInteger::subtract(const BigInteger &val) const
+{
+    return BigInteger::add(*this,val,-1);
+}
+
+BigInteger BigInteger::neg(const BigInteger &x)
+{
+    if(!x.words&&x.ival!=MIN_INT32)
+        return valueOf(-x.ival);
+    BigInteger result=ZERO;
+    result.setNegative(x);
+    return result.canonicalize();
+}
+
+void BigInteger::setNegative(const BigInteger &x)
+{
+    if(!x.words)
+    {
+        delete [] this->words;
+        if(x.ival==MIN_INT32)
+        {
+            *this=valueOf(MIN_INT32);
+        }
+        else
+        {
+            this->words=NULL;
+            this->ival=-x.ival;
+        }
+        return;
+    }
+
+    int32_t* xwords=x.words;
+    if(x.words==this->words)
+    {
+        xwords=new int32_t[x.ival];
+        memcpy(xwords,x.words,sizeof(int32_t)*static_cast<size_t>(x.ival));
+    }
+    delete [] this->words;
+    int32_t len=x.ival;
+    this->words=new int32_t[len+1];
+    if(negate(words,xwords,len))
+        words[len++]=0;
+    this->ival=len;
+    if(xwords!=x.words)
+        delete [] xwords;
+}
+
+BigInteger BigInteger::times(const BigInteger &x, int32_t y)
+{
+    if(!y)
+        return ZERO;
+    else if(1==y)
+        return x;
+    else if(!x.words)
+    {
+        return valueOf(static_cast<int64_t>(x.ival)*static_cast<int64_t>(y));
+    }
+    bool negative=false;
+    BigInteger ans=ZERO;
+    ans.words=new int32_t[x.ival+1];
+    int32_t *xwords;
+    if(x.words[x.ival-1]<0)
+    {
+        negative=true;
+        xwords=new int32_t[x.ival+1];
+        negate(xwords,x.words,x.ival);
+    }
+    else
+    {
+        xwords=x.words;
+//        xwords=new int32_t[x.ival];
+//        memcpy(xwords,x.words,static_cast<size_t>(x.ival)*sizeof(int32_t));
+    }
+    if(y<0)
+    {
+        negative=!negative;
+        y=-y;
+    }
+    ans.words[x.ival]=MPN::mul_1(ans.words,xwords,x.ival,y);
+    ans.ival=x.ival+1;
+    if(negative)
+        ans.setNegative();
+    if(xwords!=x.words)
+        delete [] xwords;
+    return ans.canonicalize();
+}
+
+void BigInteger::setNegative()
+{
+    this->setNegative(*this);
+}
+
+BigInteger BigInteger::times(const BigInteger &x, const BigInteger &y)
+{
+    if(!y.words)
+        return times(x,y.ival);
+    else if(!x.words)
+        return times(y,x.ival);
+
+    bool negative=false;
+    int32_t* xwords=x.words,*ywords=y.words;
+    if(x.words[x.ival-1]<0)
+    {
+        negative=true;
+        xwords=new int32_t[x.ival];
+        negate(xwords,x.words,x.ival);
+    }
+    if(y.words[y.ival-1]<0)
+    {
+        negative=!negative;
+        ywords=new int32_t[y.ival];
+        negate(ywords,y.words,y.ival);
+    }
+    //swap if x is shorter than y
+    int32_t xlen=x.ival,ylen=y.ival;
+    if(xlen<ylen)
+    {
+        int32_t* twords=xwords;
+        xwords=ywords;
+        ywords=twords;
+        int32_t tlen=xlen;
+        xlen=ylen;
+        ylen=tlen;
+    }
+    BigInteger ans=ZERO;
+    ans.ival=xlen+ylen;
+    ans.words=new int32_t[ans.ival];
+    MPN::mul(ans.words,xwords,xlen,ywords,ylen);
+
+    if(negative)
+        ans.setNegative();
+
+    if(xwords!=x.words&&xwords!=y.words)
+        delete [] xwords;
+    if(ywords!=y.words&&ywords!=x.words)
+        delete [] ywords;
+    return ans.canonicalize();
+}
+BigInteger BigInteger::multiply(const BigInteger &val) const
+{
+    return times(*this,val);
 }

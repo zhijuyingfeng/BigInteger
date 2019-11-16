@@ -62,3 +62,43 @@ int32_t MPN::set_str(int32_t *dest, int8_t *str, const int32_t &str_len)
     }
     return size;
 }
+
+int32_t MPN::add_n(int32_t *dest, int32_t *x, int32_t *y, const int32_t &len)
+{
+    int64_t carry=0;
+    for(int i=0;i<len;i++)
+    {
+        carry+=(static_cast<int64_t>(x[i])&NEGATIVE_ONE_64)+
+                (static_cast<int64_t>(y[i])&NEGATIVE_ONE_64);
+        dest[i]=carry&NEGATIVE_ONE;
+        uint64_t temp=static_cast<uint64_t>(carry);
+        temp>>=32;
+        carry=static_cast<int64_t>(temp);
+    }
+    return carry&NEGATIVE_ONE;
+}
+
+void MPN::mul(int32_t *dest, int32_t *x, const int32_t &xlen, int32_t *y, const int32_t &ylen)
+{
+    dest[xlen]=mul_1(dest,x,xlen,y[0]);
+
+    for(int32_t i=1;i<ylen;i++)
+    {
+        int64_t carry=0,yword=static_cast<int64_t>(y[i])&NEGATIVE_ONE_64;
+
+        for(int32_t j=0;j<xlen;j++)
+        {
+            int64_t temp=static_cast<int64_t>(x[j])&NEGATIVE_ONE_64;
+            temp*=yword;
+            temp+=static_cast<int64_t>(dest[i+j])&NEGATIVE_ONE_64;
+
+            carry+=temp;
+            dest[i+j]=carry&NEGATIVE_ONE;
+
+            uint64_t tmp=static_cast<uint64_t>(carry);
+            tmp>>=32;
+            carry=static_cast<int64_t>(tmp);
+        }
+        dest[i+xlen]=carry&NEGATIVE_ONE;
+    }
+}
