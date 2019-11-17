@@ -88,6 +88,8 @@ public:
     BigInteger add(const BigInteger&val)const;
     BigInteger subtract(const BigInteger& val)const;
     BigInteger multiply(const BigInteger&val)const;
+    BigInteger divide(const BigInteger&val)const;
+    BigInteger mod(const BigInteger&val)const;
     bool isNegative()const;
     void show();
 

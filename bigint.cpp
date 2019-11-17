@@ -722,3 +722,17 @@ void BigInteger::set(const BigInteger &y)
         memcpy(this->words,y.words,sizeof(int32_t)*static_cast<size_t>(y.ival));
     }
 }
+
+BigInteger BigInteger::divide(const BigInteger&val)const
+{
+    BigInteger q;
+    divide(*this,val,&q,NULL);
+    return q;
+}
+
+BigInteger BigInteger::mod(const BigInteger &val) const
+{
+    BigInteger r;
+    divide(*this,val,NULL,&r);
+    return r;
+}

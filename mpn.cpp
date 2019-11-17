@@ -232,23 +232,23 @@ int64_t MPN::udiv_qrnnd(int64_t N, int32_t D)
     int64_t a1 = logic_shift_right(N,32);
     int64_t a0 = N & 0xffffffffL;
     if (D >= 0)
-      {
-    if (a1 < ((D - a1 - (logic_shift_right(a0,31))) & 0xffffffffL))
-      {
-        /* dividend, divisor, and quotient are nonnegative */
-        q = N / D;
-        r = N % D;
-      }
-    else
-      {
-        /* Compute c1*2^32 + c0 = a1*2^32 + a0 - 2^31*d */
-        int64_t c = N - (static_cast<int64_t>(D) << 31);
-        /* Divide (c1*2^32 + c0) by d */
-        q = c / D;
-        r = c % D;
-        /* Add 2^31 to quotient */
-        q += static_cast<int64_t>(1)<< 31;
-      }
+    {
+        if (a1 < ((D - a1 - (logic_shift_right(a0,31))) & 0xffffffffL))
+        {
+            /* dividend, divisor, and quotient are nonnegative */
+            q = N / D;
+            r = N % D;
+        }
+        else
+        {
+            /* Compute c1*2^32 + c0 = a1*2^32 + a0 - 2^31*d */
+            int64_t c = N - (static_cast<int64_t>(D) << 31);
+            /* Divide (c1*2^32 + c0) by d */
+            q = c / D;
+            r = c % D;
+            /* Add 2^31 to quotient */
+            q += static_cast<int64_t>(1)<< 31;
+        }
       }
     else
       {
@@ -317,7 +317,10 @@ int32_t MPN::divmod_1(int32_t *quotient, int *dividend, const int &len, const in
     if((r&NEGATIVE_ONE_64)>=(static_cast<int64_t>(divisor)&NEGATIVE_ONE_64))
         r=0;
     else
+    {
         quotient[i--]=0;
+        r<<=32;
+    }
     for(;i>=0;i--)
     {
         int32_t n0=dividend[i];
