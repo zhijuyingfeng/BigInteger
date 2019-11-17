@@ -450,3 +450,167 @@ BigInteger BigInteger::multiply(const BigInteger &val) const
 {
     return times(*this,val);
 }
+
+void BigInteger::divide(int64_t x, int64_t y, BigInteger *quotient, BigInteger *remainder)
+{
+    bool x_negative=false,y_negative=false;
+    if(x<0)
+    {
+        x_negative=true;
+        if(x==MIN_INT64)
+        {
+            divide(valueOf(x),valueOf(y),quotient,remainder);
+            return;
+        }
+        x=-x;
+    }
+    if(y<0)
+    {
+        y_negative=true;
+        if(y==MIN_INT64)
+        {
+            divide(valueOf(x),valueOf(y),quotient,remainder);
+            return;
+        }
+        y=-y;
+    }
+
+    int64_t q=x/y;
+    int64_t r=x%y;
+    bool q_negative=x_negative^y_negative;
+    bool add_one=false;
+
+    if(r&&q_negative)
+        add_one=true;
+    if(quotient)
+    {
+        if(add_one)
+            q++;
+        if(q_negative)
+            q=-q;
+        quotient->set(q);
+    }
+    if(remainder)
+    {
+        if(add_one)
+        {
+            r=y-r;
+            x_negative=!x_negative;
+        }
+        if(x_negative)
+            r=-r;
+        remainder->set(r);
+    }
+}
+
+void BigInteger::set(const int64_t &y)
+{
+    int32_t i=static_cast<int32_t>(y);
+    delete [] this->words;
+    if(static_cast<int64_t>(i)==y)
+    {
+        this->ival=i;
+        this->words=NULL;
+        return;
+    }
+    this->words=new int32_t[2];
+    this->words[0]=i;
+    this->words[1]=(y>>32)&NEGATIVE_ONE;
+}
+
+void BigInteger::divide(const BigInteger &x, const BigInteger &y, BigInteger *quotient, BigInteger *remainder)
+{
+    if ((!x.words || x.ival <= 2)&& (!y.words|| y.ival <= 2))
+    {
+        int64_t x_long=x.longValue();
+        int64_t y_long=y.longValue();
+        if(x_long!=MIN_INT64&&y_long!=MIN_INT64)
+        {
+            divide(x_long,y_long,quotient,remainder);
+            return;
+        }
+    }
+    bool x_negative=x.isNegative(),y_negative=y.isNegative();
+    bool q_negative=x_negative^y_negative;
+
+    int32_t ylen=y.words?y.ival:1;
+    int32_t *ywords=new int32_t[ylen];
+    memset(ywords,0,sizeof (int32_t)*static_cast<size_t>(ylen));
+    y.getAbsolute(ywords);
+    while(ylen>1&&!ywords[ylen-1])ylen--;
+
+    int32_t xlen=x.words?x.ival:1;
+    int32_t *xwords=new int32_t[xlen];
+    memset(xwords,0,sizeof(int32_t)*static_cast<size_t>(xlen));
+    x.getAbsolute(xwords);
+    while(xlen>1&&!xwords[xlen-1])xlen--;
+
+    int32_t qlen,rlen;
+    int32_t cmpval=MPN::cmp(xwords,xlen,ywords,ylen);
+    if(cmpval<0)
+    {
+        int32_t* rwords=xwords;
+        xwords=ywords;
+        ywords=rwords;
+
+        rlen=xlen;
+        qlen=1;
+        xwords[0]=0;
+    }
+    else if(!cmpval)
+    {
+        x.words[0]=1;
+        y.words[0]=0;
+        qlen=1;rlen=0;
+    }
+    else if(ylen==1)
+    {
+        qlen=xlen;
+        // Need to leave room for a word of leading zeros if dividing by 1
+        // and the dividend has the high bit set.  It might be safe to
+        // increment qlen in all cases, but it certainly is only necessary
+        // in the following case.
+        if(ywords[0]==1&&xwords[xlen-1]<0)
+            qlen++;
+        rlen=1;
+        ywords[0]=MPN::divmod_1(xwords,xwords,xlen,ywords[0]);
+    }
+    else// abs(x) > abs(y)
+    {
+        // Normalize the denominator, i.e. make its most significant bit set by
+        // shifting it normalization_steps bits to the left.  Also shift the
+        // num
+        int32_t nshift=MPN::count_leading_zeros(ywords[ylen-1]);
+
+    }
+}
+
+int64_t BigInteger::longValue() const
+{
+    if(!this->words)
+        return this->ival;
+    if(this->ival==1)
+        return this->words[0];
+    if(this->ival==2)
+        return (static_cast<int64_t>(this->words[1])<<32)
+                +(static_cast<int64_t>(this->words[0])&NEGATIVE_ONE_64);
+    return 0;
+}
+
+void BigInteger::getAbsolute(int32_t *w)const
+{
+    if(!this->words)
+    {
+        w[0]=this->ival;
+        return;
+    }
+    int32_t len=this->ival;
+    if(this->words[len-1]<0)
+    {
+        negate(w,this->words,len);
+    }
+    else
+    {
+        memcpy(w,this->words,sizeof (int32_t)*static_cast<size_t>(len));
+    }
+}

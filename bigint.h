@@ -11,6 +11,10 @@ private:
 
     BigInteger(const int32_t&val);
     BigInteger(const int64_t&val);
+
+    /** Destructively set the value of this to a long. */
+    void set(const int64_t&y);
+
     void set(const int32_t *words, const int32_t &len);
     BigInteger canonicalize();
 
@@ -21,6 +25,7 @@ private:
     const static int64_t NEGATIVE_ONE_64=0xFFFFFFFFLL;
     const static int32_t CHARS_PER_WORD=9;
     const static int32_t MIN_INT32=static_cast<int32_t>(0x80000000);
+    const static int64_t MIN_INT64=static_cast<int64_t>(0x8000000000000000);
 
     static BigInteger valueOf(int8_t *digits, const int32_t &byte_len, const bool &negative);
     static int32_t wordsNeeded(const int32_t *words, const int32_t &len);
@@ -52,9 +57,26 @@ private:
      * OK if x==this. */
     void setAdd(const BigInteger &x,const int32_t& y);
 
+    /** Copy the abolute value of this into an array of words.
+    * Assumes words.length >= (this.words == null ? 1 : this.ival).
+    * Result is zero-extended, but need not be a valid 2's complement number.
+    */
+    void getAbsolute(int32_t* words)const;
+
     static BigInteger neg(const BigInteger& x);
     static BigInteger times(const BigInteger& x,int32_t y);
     static BigInteger times(const BigInteger&x,const BigInteger& y);
+    static void divide(int64_t x,int64_t y,BigInteger* quotient,BigInteger *remainder);
+
+    /** Divide two integers, yielding quotient and remainder.
+    * @param x the numerator in the division
+    * @param y the denominator in the division
+    * @param quotient is set to the quotient of the result (iff quotient!=null)
+    * @param remainder is set to the remainder of the result
+    *  (iff remainder!=null)
+    * @param rounding_mode one of FLOOR, CEILING, TRUNCATE, or ROUND.
+    */
+    static void divide(const BigInteger&x,const BigInteger&y,BigInteger* quotient,BigInteger *remainder);
 public:
     BigInteger();
     ~BigInteger();
@@ -66,6 +88,8 @@ public:
     BigInteger multiply(const BigInteger&val)const;
     bool isNegative()const;
     void show();
+
+    int64_t longValue()const;
 
     /** Destructively negate this. */
     void setNegative();
