@@ -115,5 +115,23 @@ public:
      * OK if dest==x.
      */
     static int32_t lshift(int32_t*dest,int32_t d_offset,int32_t* x,const int32_t&len,const int32_t&count);
+
+    /* Shift x[x_start:x_start+len-1] count bits to the "right"
+     * (i.e. divide by 2**count).
+     * Store the len least significant words of the result at dest.
+     * OK if dest==x.
+     * Assumes: 0 <= count < 32
+     * Same as rshift, but handles count==0 (and has no return value).
+     */
+    static void rshift0(int32_t* dest,int32_t* x,const int32_t&x_start,const int32_t&len,const int32_t&count);
+
+    /* Shift x[x_start:x_start+len-1] count bits to the "right"
+     * (i.e. divide by 2**count).
+     * Store the len least significant words of the result at dest.
+     * The bits shifted out to the right are returned.
+     * OK if dest==x.
+     * Assumes: 0 < count < 32
+     */
+    static int32_t rshift(int32_t* dest,int32_t* x,const int32_t&x_start,const int32_t&len,const int32_t& count);
 };
 #endif // MPN_H

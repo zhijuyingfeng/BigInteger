@@ -14,9 +14,11 @@ private:
 
     /** Destructively set the value of this to a long. */
     void set(const int64_t&y);
-
+    void set(const BigInteger&y);
     void set(const int32_t *words, const int32_t &len);
     BigInteger canonicalize();
+    void setInvert();
+    void setAdd(const int32_t&y);
 
     const static BigInteger ONE;
     const static BigInteger ZERO;

@@ -581,7 +581,86 @@ void BigInteger::divide(const BigInteger &x, const BigInteger &y, BigInteger *qu
         // shifting it normalization_steps bits to the left.  Also shift the
         // num
         int32_t nshift=MPN::count_leading_zeros(ywords[ylen-1]);
+        if(nshift)
+        {
+            // Shift up the denominator setting the most significant bit of
+            // the most significant word.
+            MPN::lshift(ywords,0,ywords,ylen,nshift);
 
+            int32_t x_high=MPN::lshift(xwords,0,xwords,xlen,nshift);
+            xwords[xlen++]=x_high;
+        }
+
+        if(xlen==ylen)
+            xwords[xlen++]=0;
+        MPN::divide(xwords,xlen,ywords,ylen);
+        rlen=ylen;
+        MPN::rshift0(ywords,xwords,0,rlen,nshift);
+
+        qlen=xlen+1-ylen;
+        if(quotient)
+        {
+            for(int32_t i=0;i<qlen;i++)
+                xwords[i]=xwords[i+ylen];
+        }
+    }
+    if(ywords[rlen-1]<0)
+    {
+        ywords[rlen]=0;
+        rlen++;
+    }
+
+    // Now the quotient is in xwords, and the remainder is in ywords.
+    bool add_one=false;
+    if(rlen>1||ywords[0])
+    {// Non-zero remainder i.e. in-exact quotient.
+        if(q_negative)
+            add_one=true;
+    }
+    if(quotient)
+    {
+        quotient->set(xwords,qlen);
+        if(q_negative)
+        {
+            if(add_one)
+                quotient->setInvert();
+                //TODO
+            else
+                quotient->setNegative();
+        }
+        else if(add_one)
+            quotient->setAdd(1);
+    }
+    if(remainder)
+    {
+        // The remainder is by definition: X-Q*Y
+        remainder->set(ywords,rlen);
+        if(add_one)
+        {
+            // Subtract the remainder from Y:
+            // abs(R) = abs(Y) - abs(orig_rem) = -(abs(orig_rem) - abs(Y)).
+            BigInteger tmp=ZERO;
+            if(!y.words)
+            {
+                tmp=*remainder;
+                tmp.set(y_negative?ywords[0]+y.ival:ywords[0]-y.ival);
+            }
+            else
+                tmp=add(*remainder,y,y_negative?1:-1);
+            // Now tmp <= 0.
+            // In this case, abs(Q) = 1 + floor(abs(X)/abs(Y)).
+            // Hence, abs(Q*Y) > abs(X).
+            // So sign(remainder) = -sign(X).
+            if(x_negative)
+                remainder->setNegative(tmp);
+            else
+                remainder->set(tmp);
+        }
+        else
+        {
+            if(x_negative)
+                remainder->setNegative();
+        }
     }
 }
 
@@ -612,5 +691,34 @@ void BigInteger::getAbsolute(int32_t *w)const
     else
     {
         memcpy(w,this->words,sizeof (int32_t)*static_cast<size_t>(len));
+    }
+}
+
+void BigInteger::setInvert()
+{
+    if(!this->words)
+        this->ival=~this->ival;
+    else
+    {
+        for(int32_t i=this->ival;--i>=0;)
+            this->words[i]=~this->words[i];
+    }
+}
+
+void BigInteger::setAdd(const int32_t &y)
+{
+    this->setAdd(*this,y);
+}
+
+void BigInteger::set(const BigInteger &y)
+{
+    if(!y.words)
+        set(y.ival);
+    else if(this!=&y)
+    {
+        delete [] this->words;
+        this->words=new int32_t[y.ival];
+        this->ival=y.ival;
+        memcpy(this->words,y.words,sizeof(int32_t)*static_cast<size_t>(y.ival));
     }
 }

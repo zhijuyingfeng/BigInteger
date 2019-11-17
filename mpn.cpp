@@ -370,3 +370,58 @@ int32_t MPN::lshift(int32_t *dest, int32_t d_offset, int32_t *x, const int32_t &
     dest[d_offset+i]=high_word<<count;
     return retval;
 }
+
+void MPN::rshift0(int32_t *dest, int32_t *x, const int32_t &x_start, const int32_t &len, const int32_t &count)
+{
+    if(count>0)
+        rshift(dest,x,x_start,len,count);
+    else
+    {
+        for(int32_t i=0;i<len;i++)
+            dest[i]=x[i+x_start];
+    }
+}
+
+int32_t MPN::rshift(int32_t *dest, int32_t *x, const int32_t &x_start, const int32_t &len, const int32_t &count)
+{
+    int32_t count_2=32-count;
+    int32_t low_word=x[x_start];
+    int32_t retval=low_word<<count_2;
+    int32_t i=1;
+    for(;i<len;i++)
+    {
+        int32_t high_word=x[x_start+i];
+        uint32_t temp=static_cast<uint32_t>(low_word);
+        temp>>=count;
+        dest[i-1]=(static_cast<int32_t>(temp))|(high_word<<count_2);
+        low_word=high_word;
+    }
+    uint32_t temp=static_cast<uint32_t>(low_word);
+    temp>>=count;
+    dest[i-1]=static_cast<int32_t>(temp);
+    return retval;
+}
+
+int32_t MPN::submul_1(int32_t *dest, const int32_t &offset, const int32_t *x, const int32_t &len, const int32_t &y)
+{
+    int64_t yl=static_cast<int64_t>(y)&NEGATIVE_ONE_64;
+    const int32_t MIN_INT32=static_cast<int32_t>(0x80000000);
+    int32_t carry=0,j=0;
+    do
+    {
+        int64_t prod=yl*(static_cast<int64_t>(x[j])&NEGATIVE_ONE_64);
+        int32_t prod_low=prod&NEGATIVE_ONE;
+        int32_t prod_high=(prod>>32)&NEGATIVE_ONE;
+        prod_low+=carry;
+        // Invert the high-order bit, because: (unsigned) X > (unsigned) Y
+        // iff: (int) (X^0x80000000) > (int) (Y^0x80000000).
+        carry=((prod_low^MIN_INT32)<(carry^MIN_INT32)?1:0)+prod_high;
+
+        int32_t x_j=dest[offset+j];
+        prod_low=x_j-prod_low;
+        if((prod_low^MIN_INT32)>(x_j^MIN_INT32))
+            carry++;
+        dest[offset+j]=prod_low;
+    }while(++j<len);
+    return carry;
+}
