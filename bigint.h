@@ -19,6 +19,9 @@ private:
     BigInteger canonicalize();
     void setInvert();
     void setAdd(const int32_t&y);
+    void setShift(const BigInteger&x,const int32_t&count);
+    void setShiftLeft(const BigInteger&x,int32_t count);
+    void setShiftRight(const BigInteger&x,int32_t count);
 
     const static BigInteger ONE;
     const static BigInteger ZERO;
@@ -69,6 +72,7 @@ private:
     static BigInteger times(const BigInteger& x,int32_t y);
     static BigInteger times(const BigInteger&x,const BigInteger& y);
     static void divide(int64_t x,int64_t y,BigInteger* quotient,BigInteger *remainder);
+    static BigInteger shift(const BigInteger&val,const int32_t&count);
 
     /** Divide two integers, yielding quotient and remainder.
     * @param x the numerator in the division
@@ -92,6 +96,8 @@ public:
     BigInteger mod(const BigInteger&val)const;
     bool isNegative()const;
     void show();
+    BigInteger modInverse(const BigInteger &val)const;
+    BigInteger modPow(const BigInteger &exponent)const;
 
     int64_t longValue()const;
 

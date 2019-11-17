@@ -8,7 +8,7 @@ int main()
 {
     BigInteger a("12345678901234567890");
     BigInteger b("1234567889");
-    BigInteger c=a.mod(b);
+    BigInteger c=a.divide(b);
     c.show();
     return 0;
 }

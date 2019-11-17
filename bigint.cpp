@@ -480,23 +480,23 @@ void BigInteger::divide(int64_t x, int64_t y, BigInteger *quotient, BigInteger *
     bool q_negative=x_negative^y_negative;
     bool add_one=false;
 
-    if(r&&q_negative)
-        add_one=true;
+//    if(r&&q_negative)
+//        add_one=true;
     if(quotient)
     {
-        if(add_one)
-            q++;
+//        if(add_one)
+//            q++;
         if(q_negative)
             q=-q;
         quotient->set(q);
     }
     if(remainder)
     {
-        if(add_one)
-        {
-            r=y-r;
-            x_negative=!x_negative;
-        }
+//        if(add_one)
+//        {
+//            r=y-r;
+//            x_negative=!x_negative;
+//        }
         if(x_negative)
             r=-r;
         remainder->set(r);
@@ -611,52 +611,52 @@ void BigInteger::divide(const BigInteger &x, const BigInteger &y, BigInteger *qu
     }
 
     // Now the quotient is in xwords, and the remainder is in ywords.
-    bool add_one=false;
-    if(rlen>1||ywords[0])
-    {// Non-zero remainder i.e. in-exact quotient.
-        if(q_negative)
-            add_one=true;
-    }
+//    bool add_one=false;
+//    if(rlen>1||ywords[0])
+//    {// Non-zero remainder i.e. in-exact quotient.
+//        if(q_negative)
+//            add_one=true;
+//    }
     if(quotient)
     {
         quotient->set(xwords,qlen);
         if(q_negative)
         {
-            if(add_one)
-                quotient->setInvert();
-                //TODO
-            else
+//            if(add_one)
+//                quotient->setInvert();
+//                //TODO
+//            else
                 quotient->setNegative();
         }
-        else if(add_one)
-            quotient->setAdd(1);
+//        else if(add_one)
+//            quotient->setAdd(1);
     }
     if(remainder)
     {
         // The remainder is by definition: X-Q*Y
         remainder->set(ywords,rlen);
-        if(add_one)
-        {
-            // Subtract the remainder from Y:
-            // abs(R) = abs(Y) - abs(orig_rem) = -(abs(orig_rem) - abs(Y)).
-            BigInteger tmp=ZERO;
-            if(!y.words)
-            {
-                tmp=*remainder;
-                tmp.set(y_negative?ywords[0]+y.ival:ywords[0]-y.ival);
-            }
-            else
-                tmp=add(*remainder,y,y_negative?1:-1);
-            // Now tmp <= 0.
-            // In this case, abs(Q) = 1 + floor(abs(X)/abs(Y)).
-            // Hence, abs(Q*Y) > abs(X).
-            // So sign(remainder) = -sign(X).
-            if(x_negative)
-                remainder->setNegative(tmp);
-            else
-                remainder->set(tmp);
-        }
-        else
+//        if(add_one)
+//        {
+//            // Subtract the remainder from Y:
+//            // abs(R) = abs(Y) - abs(orig_rem) = -(abs(orig_rem) - abs(Y)).
+//            BigInteger tmp=ZERO;
+//            if(!y.words)
+//            {
+//                tmp=*remainder;
+//                tmp.set(y_negative?ywords[0]+y.ival:ywords[0]-y.ival);
+//            }
+//            else
+//                tmp=add(*remainder,y,y_negative?1:-1);
+//            // Now tmp <= 0.
+//            // In this case, abs(Q) = 1 + floor(abs(X)/abs(Y)).
+//            // Hence, abs(Q*Y) > abs(X).
+//            // So sign(remainder) = -sign(X).
+//            if(x_negative)
+//                remainder->setNegative(tmp);
+//            else
+//                remainder->set(tmp);
+//        }
+//        else
         {
             if(x_negative)
                 remainder->setNegative();
@@ -735,4 +735,103 @@ BigInteger BigInteger::mod(const BigInteger &val) const
     BigInteger r;
     divide(*this,val,NULL,&r);
     return r;
+}
+
+BigInteger BigInteger::shift(const BigInteger &val, const int32_t &count)
+{
+    if(!val.words)
+    {
+        if(count<=0)
+            return valueOf(count>-32?val.ival>>(-count):
+                                     val.ival<0?-1:0);
+        if(count<32)
+            return valueOf(static_cast<int64_t>(val.ival)<<count);
+    }
+    if(!count)
+        return val;
+    BigInteger result=ZERO;
+    result.setShift(val,count);
+    return result.canonicalize();
+}
+
+void BigInteger::setShift(const BigInteger &x, const int32_t &count)
+{
+    if(count>0)
+        setShiftLeft(x,count);
+    else
+        setShiftRight(x,count);
+}
+
+void BigInteger::setShiftRight(const BigInteger &x, int32_t count)
+{
+    if(!x.words)
+        this->set(count<32?x.ival>>count:x.ival<0?-1:0);
+    else if(!count)
+        this->set(x);
+    else
+    {
+        bool negative=x.isNegative();
+        int32_t word_count=count>>5;
+        count&=31;
+        int32_t d_len=x.ival-word_count;
+        if(d_len<=0)
+            this->set(negative?-1:0);
+        else
+        {
+            if(!this->words||this->ival<d_len)
+            {
+                delete [] this->words;
+                this->words=new int32_t[d_len];
+            }
+            MPN::rshift0(this->words,x.words,word_count,d_len,count);
+            this->ival=d_len;
+            if(negative)
+                words[d_len-1]|=-2<<(31-count);
+        }
+    }
+}
+
+void BigInteger::setShiftLeft(const BigInteger &x, int32_t count)
+{
+    int32_t *xwords;
+    int32_t xlen;
+    if(!x.words)
+    {
+        if(count<32)
+        {
+            this->set(static_cast<int64_t>(x.ival)<<count);
+            return;
+        }
+        xwords=new int32_t[1];
+        xwords[0]=x.ival;
+        xlen=1;
+    }
+    else
+    {
+        xwords=new int32_t[x.ival];
+        memcpy(xwords,x.words,sizeof(int32_t)*static_cast<size_t>(x.ival));
+        xlen=x.ival;
+    }
+    int32_t word_count=count>>5;
+    count&=31;
+    int32_t new_len=xlen+word_count;
+
+    delete [] this->words;
+    if(!count)
+    {
+        this->words=new int32_t[new_len];
+        for(int32_t i=0;--i>=0;)
+            words[i+word_count]=xwords[i];
+    }
+    else
+    {
+        new_len++;
+        this->words=new int32_t[new_len];
+        int32_t shift_out=MPN::lshift(words,word_count,xwords,xlen,count);
+        count=32-count;
+        this->words[new_len-1]=(shift_out<<count)>>count;
+    }
+    ival=new_len;
+    for(int32_t i=word_count;--i>=0;)
+        this->words[i]=0;
 }
