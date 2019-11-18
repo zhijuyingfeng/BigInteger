@@ -1,5 +1,6 @@
 #include <cstdio>
 #include <cstdlib>
+#include <ctime>
 #include <cstdint>
 #include "mpn.h"
 #include "bigint.h"
@@ -18,9 +19,12 @@ int main()
                              "449358830496413557281341725462360322134010042282012642"
                              "274593164792155394683891626920676409771537318196968561"
                              "566914528483955014073455660937229038263";
-    BigInteger p("12345678901234567890"),q("12345678889");
-    BigInteger c=q.modInverse(p);
-//    BigInteger c=p.divide(q);
+
+    BigInteger p(p_string),q(q_string);
+    clock_t t=clock();
+    BigInteger c=p.modInverse(q);
+    t=clock()-t;
     c.show();
+    printf("%lf\n",1000.0*t/CLOCKS_PER_SEC);
     return 0;
 }

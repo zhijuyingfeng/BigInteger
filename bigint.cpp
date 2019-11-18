@@ -575,12 +575,13 @@ void BigInteger::divide(const BigInteger &x, const BigInteger &y, BigInteger *qu
     while(ylen>1&&!ywords[ylen-1])ylen--;
 
     int32_t xlen=x.words?x.ival:1;
-    int32_t *xwords=new int32_t[xlen];
-    memset(xwords,0,sizeof(int32_t)*static_cast<size_t>(xlen));
+    int32_t *xwords=new int32_t[xlen+2];
+    memset(xwords,0,sizeof(int32_t)*static_cast<size_t>(xlen+2));
     x.getAbsolute(xwords);
     while(xlen>1&&!xwords[xlen-1])xlen--;
 
     int32_t qlen,rlen;
+
     int32_t cmpval=MPN::cmp(xwords,xlen,ywords,ylen);
     if(cmpval<0)
     {

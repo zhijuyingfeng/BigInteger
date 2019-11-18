@@ -344,13 +344,14 @@ int32_t MPN::cmp(const int32_t *x, const int32_t *y, const int32_t &size)
     int32_t temp=size;
     while(--temp>=0)
     {
-        int32_t x_word=x[temp],y_word=y[temp];
-        if(x_word!=y_word)
-            return static_cast<int32_t>(0x80000000^x_word)>static_cast<int32_t>(y_word^0x8000000)?1:-1;
+//        int32_t x_word=x[temp],y_word=y[temp];
+//        if(x_word!=y_word)
+//            return (x_word^0x80000000)>(y_word^0x8000000)?1:-1;
 
-//        uint32_t x_word=static_cast<uint32_t>(x[temp]);
-//        uint32_t y_word=static_cast<uint32_t>(y[temp]);
-//        return x_word>y_word?1:-1;
+        uint32_t x_word=static_cast<uint32_t>(x[temp]);
+        uint32_t y_word=static_cast<uint32_t>(y[temp]);
+        if(x_word!=y_word)
+            return x_word>y_word?1:-1;
     }
     return 0;
 }
