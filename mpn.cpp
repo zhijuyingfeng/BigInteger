@@ -230,10 +230,10 @@ int64_t MPN::udiv_qrnnd(int64_t N, int32_t D)
 {
     int64_t q, r;
     int64_t a1 = logic_shift_right(N,32);
-    int64_t a0 = N & 0xffffffffL;
+    int64_t a0 = N & NEGATIVE_ONE_64;
     if (D >= 0)
     {
-        if (a1 < ((D - a1 - (logic_shift_right(a0,31))) & 0xffffffffL))
+        if (a1 < ((D - a1 - (logic_shift_right(a0,31))) & NEGATIVE_ONE_64))
         {
             /* dividend, divisor, and quotient are nonnegative */
             q = N / D;
@@ -251,54 +251,61 @@ int64_t MPN::udiv_qrnnd(int64_t N, int32_t D)
         }
       }
     else
-      {
-    int64_t b1 = logic_shift_right(D,1);	/* d/2, between 2^30 and 2^31 - 1 */
-    //int64_t c1 = (a1 >> 1); /* A/2 */
-    //int c0 = (a1 << 31) + (a0 >> 1);
-    int64_t c = logic_shift_right(N,1);
-    if (a1 < b1 || (a1 >> 1) < b1)
-      {
-        if (a1 < b1)
-          {
-        q = c / b1;
-        r = c % b1;
-          }
-        else /* c1 < b1, so 2^31 <= (A/2)/b1 < 2^32 */
-          {
-        c = ~(c - (b1 << 32));
-        q = c / b1;  /* (A/2) / (d/2) */
-        r = c % b1;
-        q = (~q) & 0xffffffffL;    /* (A/2)/b1 */
-        r = (b1 - 1) - r; /* r < b1 => new r >= 0 */
-          }
-        r = 2 * r + (a0 & 1);
-        if ((D & 1) != 0)
-          {
-        if (r >= q) {
-                r = r - q;
-        } else if (q - r <= (static_cast<int64_t>(D) & 0xffffffffL)) {
-                       r = r - q + D;
-                q -= 1;
-        } else {
-                       r = r - q + D + D;
-                q -= 2;
+    {
+        uint32_t temp=static_cast<uint32_t>(D);
+        temp>>=1;
+        int64_t b1 = temp;	/* d/2, between 2^30 and 2^31 - 1 */
+        //int64_t c1 = (a1 >> 1); /* A/2 */
+        //int c0 = (a1 << 31) + (a0 >> 1);
+        int64_t c = logic_shift_right(N,1);
+        if (a1 < b1 || (a1 >> 1) < b1)
+        {
+            if (a1 < b1)
+            {
+                q = c / b1;
+                r = c % b1;
+            }
+            else /* c1 < b1, so 2^31 <= (A/2)/b1 < 2^32 */
+            {
+                c = ~(c - (b1 << 32));
+                q = c / b1;  /* (A/2) / (d/2) */
+                r = c % b1;
+                q = (~q) & NEGATIVE_ONE_64;    /* (A/2)/b1 */
+                r = (b1 - 1) - r; /* r < b1 => new r >= 0 */
+            }
+            r = 2 * r + (a0 & 1);
+            if ((D & 1) != 0)
+            {
+                if (r >= q)
+                {
+                    r = r - q;
+                }
+                else if (q - r <= (static_cast<int64_t>(D) & NEGATIVE_ONE_64))
+                {
+                    r = r - q + D;
+                    q -= 1;
+                }
+                else
+                {
+                    r = r - q + D + D;
+                    q -= 2;
+                }
+            }
         }
-          }
-      }
-    else				/* Implies c1 = b1 */
-      {				/* Hence a1 = d - 1 = 2*b1 - 1 */
-        if (a0 >= (static_cast<int64_t>(-D) & 0xffffffffL))
-          {
-        q = -1;
-            r = a0 + D;
-          }
-        else
-          {
-        q = -2;
-            r = a0 + D + D;
-          }
-      }
-      }
+        else				/* Implies c1 = b1 */
+        {				/* Hence a1 = d - 1 = 2*b1 - 1 */
+            if (a0 >= (static_cast<int64_t>(-D) & NEGATIVE_ONE_64))
+            {
+                q = -1;
+                r = a0 + D;
+            }
+            else
+            {
+                q = -2;
+                r = a0 + D + D;
+            }
+        }
+    }
 
     return (r << 32) | (q & 0xFFFFFFFFl);
 }

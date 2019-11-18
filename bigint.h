@@ -26,6 +26,10 @@ private:
     const static BigInteger ONE;
     const static BigInteger ZERO;
     const static BigInteger TEN;
+    const static int32_t FLOOR=1;
+    const static int32_t CEILING=2;
+    const static int32_t TRUNCATE=3;
+    const static int32_t ROUND=4;
     const static int32_t NEGATIVE_ONE=-1;
     const static int64_t NEGATIVE_ONE_64=0xFFFFFFFFLL;
     const static int32_t CHARS_PER_WORD=9;
@@ -72,11 +76,12 @@ private:
     static BigInteger And(const BigInteger&x,const int32_t&y);
 
     static void swap(BigInteger&x,BigInteger&y);
+    static int32_t compareTo(const BigInteger&x,const BigInteger&y);
 
     static BigInteger neg(const BigInteger& x);
     static BigInteger times(const BigInteger& x,int32_t y);
     static BigInteger times(const BigInteger&x,const BigInteger& y);
-    static void divide(int64_t x,int64_t y,BigInteger* quotient,BigInteger *remainder);
+    static void divide(int64_t x,int64_t y,BigInteger* quotient,BigInteger *remainder,const int32_t&rounding_mode);
     static BigInteger shift(const BigInteger&val,const int32_t&count);
 
     /** Divide two integers, yielding quotient and remainder.
@@ -87,7 +92,7 @@ private:
     *  (iff remainder!=null)
     * @param rounding_mode one of FLOOR, CEILING, TRUNCATE, or ROUND.
     */
-    static void divide(const BigInteger&x,const BigInteger&y,BigInteger* quotient,BigInteger *remainder);
+    static void divide(const BigInteger&x,const BigInteger&y,BigInteger* quotient,BigInteger *remainder,const int32_t&rounding_mode);
 public:
     BigInteger();
     ~BigInteger();

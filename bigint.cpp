@@ -147,6 +147,11 @@ BigInteger BigInteger::valueOf(const int64_t &val)
 
 void BigInteger::show()
 {
+    if(!this->words)
+    {
+        printf("%08X\n",this->ival);
+        return;
+    }
     for(int i=0;i<this->ival;i++)
         printf("%08x",this->words[this->ival-i-1]);
     printf("\n");
@@ -250,8 +255,8 @@ BigInteger BigInteger::add(BigInteger x, BigInteger y, const int32_t &k)
 {
     if(!x.words&&!y.words)
     {
-        int64_t temp=static_cast<int64_t>(k)*static_cast<int64_t>(x.ival);
-        temp*=static_cast<int64_t>(y.ival);
+        int64_t temp=static_cast<int64_t>(k)*static_cast<int64_t>(y.ival);
+        temp+=static_cast<int64_t>(x.ival);
         return valueOf(temp);
     }
     if(k!=1)
@@ -451,7 +456,7 @@ BigInteger BigInteger::multiply(const BigInteger &val) const
     return times(*this,val);
 }
 
-void BigInteger::divide(int64_t x, int64_t y, BigInteger *quotient, BigInteger *remainder)
+void BigInteger::divide(int64_t x, int64_t y, BigInteger *quotient, BigInteger *remainder,const int32_t&rounding_mode)
 {
     bool x_negative=false,y_negative=false;
     if(x<0)
@@ -459,7 +464,7 @@ void BigInteger::divide(int64_t x, int64_t y, BigInteger *quotient, BigInteger *
         x_negative=true;
         if(x==MIN_INT64)
         {
-            divide(valueOf(x),valueOf(y),quotient,remainder);
+            divide(valueOf(x),valueOf(y),quotient,remainder,rounding_mode);
             return;
         }
         x=-x;
@@ -469,7 +474,15 @@ void BigInteger::divide(int64_t x, int64_t y, BigInteger *quotient, BigInteger *
         y_negative=true;
         if(y==MIN_INT64)
         {
-            divide(valueOf(x),valueOf(y),quotient,remainder);
+            if(rounding_mode==TRUNCATE)
+            {
+                if(quotient)
+                    quotient->set(0);
+                if(remainder)
+                    remainder->set(x);
+            }
+            else
+                divide(valueOf(x),valueOf(y),quotient,remainder,rounding_mode);
             return;
         }
         y=-y;
@@ -480,23 +493,45 @@ void BigInteger::divide(int64_t x, int64_t y, BigInteger *quotient, BigInteger *
     bool q_negative=x_negative^y_negative;
     bool add_one=false;
 
-//    if(r&&q_negative)
-//        add_one=true;
+    if(r)
+    {
+        switch (rounding_mode)
+        {
+            case TRUNCATE:break;
+            case CEILING:
+            case FLOOR:
+                if(q_negative==(rounding_mode==FLOOR))
+                    add_one=true;
+                break;
+            case ROUND:
+                add_one=r>((y-(q&1))>>1);
+                break;
+        }
+    }
     if(quotient)
     {
-//        if(add_one)
-//            q++;
+        if(add_one)
+            q++;
         if(q_negative)
             q=-q;
         quotient->set(q);
     }
     if(remainder)
     {
-//        if(add_one)
-//        {
-//            r=y-r;
-//            x_negative=!x_negative;
-//        }
+        // The remainder is by definition: X-Q*Y
+        if(add_one)
+        {
+             // Subtract the remainder from Y.
+            r=y-r;
+            // In this case, abs(Q*Y) > abs(X).
+            // So sign(remainder) = -sign(X).
+            x_negative=!x_negative;
+        }
+        else
+        {
+            // If !add_one, then: abs(Q*Y) <= abs(X).
+            // So sign(remainder) = sign(X).
+        }
         if(x_negative)
             r=-r;
         remainder->set(r);
@@ -518,7 +553,7 @@ void BigInteger::set(const int64_t &y)
     this->words[1]=(y>>32)&NEGATIVE_ONE;
 }
 
-void BigInteger::divide(const BigInteger &x, const BigInteger &y, BigInteger *quotient, BigInteger *remainder)
+void BigInteger::divide(const BigInteger &x, const BigInteger &y, BigInteger *quotient, BigInteger *remainder,const int32_t&rounding_mode)
 {
     if ((!x.words || x.ival <= 2)&& (!y.words|| y.ival <= 2))
     {
@@ -526,7 +561,7 @@ void BigInteger::divide(const BigInteger &x, const BigInteger &y, BigInteger *qu
         int64_t y_long=y.longValue();
         if(x_long!=MIN_INT64&&y_long!=MIN_INT64)
         {
-            divide(x_long,y_long,quotient,remainder);
+            divide(x_long,y_long,quotient,remainder,rounding_mode);
             return;
         }
     }
@@ -611,53 +646,72 @@ void BigInteger::divide(const BigInteger &x, const BigInteger &y, BigInteger *qu
     }
 
     // Now the quotient is in xwords, and the remainder is in ywords.
-//    bool add_one=false;
-//    if(rlen>1||ywords[0])
-//    {// Non-zero remainder i.e. in-exact quotient.
-//        if(q_negative)
-//            add_one=true;
-//    }
+    bool add_one=false;
+    if(rlen>1||ywords[0])
+    {
+        // Non-zero remainder i.e. in-exact quotient.
+        switch (rounding_mode)
+        {
+            case TRUNCATE:break;
+            case CEILING:
+            case FLOOR:
+                if(q_negative==(FLOOR==rounding_mode))
+                    add_one=true;
+                break;
+            case ROUND:
+                BigInteger tmp=!remainder?ZERO:*remainder;
+                tmp.set(ywords,rlen);
+                tmp=shift(tmp,1);
+                if(y_negative)
+                    tmp.setNegative();
+                int32_t cmp=compareTo(tmp,y);
+                if(y_negative)
+                    cmp=-cmp;
+                add_one=(cmp==1)||(!cmp&&(xwords[0]&1));
+        }
+    }
     if(quotient)
     {
         quotient->set(xwords,qlen);
         if(q_negative)
         {
-//            if(add_one)
-//                quotient->setInvert();
-//                //TODO
-//            else
+            if(add_one)// -(quotient + 1) == ~(quotient)
+                quotient->setInvert();
+            else
                 quotient->setNegative();
         }
-//        else if(add_one)
-//            quotient->setAdd(1);
+        else if(add_one)
+            quotient->setAdd(1);
     }
     if(remainder)
     {
         // The remainder is by definition: X-Q*Y
         remainder->set(ywords,rlen);
-//        if(add_one)
-//        {
-//            // Subtract the remainder from Y:
-//            // abs(R) = abs(Y) - abs(orig_rem) = -(abs(orig_rem) - abs(Y)).
-//            BigInteger tmp=ZERO;
-//            if(!y.words)
-//            {
-//                tmp=*remainder;
-//                tmp.set(y_negative?ywords[0]+y.ival:ywords[0]-y.ival);
-//            }
-//            else
-//                tmp=add(*remainder,y,y_negative?1:-1);
-//            // Now tmp <= 0.
-//            // In this case, abs(Q) = 1 + floor(abs(X)/abs(Y)).
-//            // Hence, abs(Q*Y) > abs(X).
-//            // So sign(remainder) = -sign(X).
-//            if(x_negative)
-//                remainder->setNegative(tmp);
-//            else
-//                remainder->set(tmp);
-//        }
-//        else
+        if(add_one)
         {
+            // Subtract the remainder from Y:
+            // abs(R) = abs(Y) - abs(orig_rem) = -(abs(orig_rem) - abs(Y)).
+            BigInteger tmp=ZERO;
+            if(!y.words)
+            {
+                tmp=*remainder;
+                tmp.set(y_negative?ywords[0]+y.ival:ywords[0]-y.ival);
+            }
+            else
+                tmp=BigInteger::add(*remainder,y,y_negative?1:-1);
+            // Now tmp <= 0.
+            // In this case, abs(Q) = 1 + floor(abs(X)/abs(Y)).
+            // Hence, abs(Q*Y) > abs(X).
+            // So sign(remainder) = -sign(X).
+            if(x_negative)
+                remainder->setNegative(tmp);
+            else
+                remainder->set(tmp);
+        }
+        else
+        {
+            // If !add_one, then: abs(Q*Y) <= abs(X).
+            // So sign(remainder) = sign(X).
             if(x_negative)
                 remainder->setNegative();
         }
@@ -726,15 +780,15 @@ void BigInteger::set(const BigInteger &y)
 BigInteger BigInteger::divide(const BigInteger&val)const
 {
     BigInteger q;
-    divide(*this,val,&q,NULL);
-    return q;
+    divide(*this,val,&q,NULL,3);
+    return q.canonicalize();
 }
 
 BigInteger BigInteger::mod(const BigInteger &val) const
 {
     BigInteger r;
-    divide(*this,val,NULL,&r);
-    return r;
+    divide(*this,val,NULL,&r,1);
+    return r.canonicalize();
 }
 
 BigInteger BigInteger::shift(const BigInteger &val, const int32_t &count)
@@ -938,4 +992,19 @@ BigInteger BigInteger::modInverse(const BigInteger &val) const
         p2=b2.multiply(*this).mod(val);
     }
     return b2.mod(val);
+}
+
+int32_t BigInteger::compareTo(const BigInteger &x, const BigInteger &y)
+{
+    if(!x.words&&!y.words)
+        return x.ival<y.ival?-1:x.ival>y.ival?1:0;
+    bool x_negative=x.isNegative();
+    bool y_negative=y.isNegative();
+    if(x_negative!=y_negative)
+        return x_negative?-1:1;
+    int32_t xlen=!x.words?1:x.ival;
+    int32_t ylen=!y.words?1:y.ival;
+    if(xlen!=ylen)
+        return (xlen>ylen)!=x_negative?1:-1;
+    return MPN::cmp(x.words,y.words,xlen);
 }
