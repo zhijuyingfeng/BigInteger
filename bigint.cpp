@@ -835,3 +835,107 @@ void BigInteger::setShiftLeft(const BigInteger &x, int32_t count)
     for(int32_t i=word_count;--i>=0;)
         this->words[i]=0;
 }
+
+bool BigInteger::isZero() const
+{
+    return (!ival)&&(!this->words);
+}
+
+BigInteger BigInteger::modPow(const BigInteger &exponent,const BigInteger& m) const
+{
+    if(m.isZero()||m.isNegative())
+        return ZERO;
+    BigInteger exp=exponent;
+    if(exponent.isNegative())
+        return modInverse(m).modPow(exp.negate(),m);
+    BigInteger ans=ONE,t=*this;
+    while(!exp.isZero())
+    {
+        if(exp.And(ONE).isOne())
+            ans=this->times(ans,t).mod(m);
+        exp=exp.shiftRight(1);
+        t=t.times(t,t).mod(m);
+    }
+    return ans;
+}
+
+BigInteger BigInteger::negate()
+{
+    return this->neg(*this);
+}
+
+bool BigInteger::isOne() const
+{
+    return (!this->words)&&(1==this->ival);
+}
+
+BigInteger BigInteger::shiftRight(const int32_t &n) const
+{
+    return this->shift(*this,-n);
+}
+
+BigInteger BigInteger::shiftLeft(const int32_t &n) const
+{
+    return this->shift(*this,n);
+}
+
+BigInteger BigInteger::And(const BigInteger &x, const int32_t &y)
+{
+    if(!x.words)
+        return valueOf(x.ival&y);
+    if(y>=0)
+        return valueOf(x.words[0]&y);
+    int32_t* words=new int32_t[x.ival];
+    memcpy(words,x.words,sizeof(int32_t)*static_cast<size_t>(x.ival));
+    words[0]&=y;
+    BigInteger ans=make(words,x.ival);
+    delete [] words;
+    return ans;
+}
+
+BigInteger BigInteger::And(const BigInteger &y)const
+{
+    if(!y.words)
+        return And(*this,y.ival);
+    if(!this->words)
+        return And(y,this->ival);
+    BigInteger x=*this,y_=y;
+    if(x.ival<y.ival)
+        swap(x,y_);
+    int32_t i,len=y_.isNegative()?x.ival:y_.ival;
+    int32_t* Words=new int32_t[len];
+    for(i=0;i<y_.ival;i++)
+        Words[i]=x.words[i]&y_.words[i];
+    for(;i<len;i++)
+        Words[i]=x.words[i];
+    BigInteger ans=make(Words,len);
+    delete [] Words;
+    return ans;
+}
+
+void BigInteger::swap(BigInteger &x, BigInteger &y)
+{
+    int32_t *t=x.words;
+    x.words=y.words;
+    y.words=t;
+
+    int32_t temp=x.ival;
+    x.ival=y.ival;
+    y.ival=temp;
+}
+
+BigInteger BigInteger::modInverse(const BigInteger &val) const
+{
+    BigInteger b1=ZERO,b2=ONE;
+    BigInteger p1=val,p2=*this;
+    BigInteger q;
+    while(!p2.isOne())
+    {
+        q=p1.divide(p2);
+        BigInteger temp=b1.subtract(q.multiply(b2));
+        b1=b2;p1=p2;
+        b2=temp;
+        p2=b2.multiply(*this).mod(val);
+    }
+    return b2.mod(val);
+}

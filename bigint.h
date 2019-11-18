@@ -68,6 +68,11 @@ private:
     */
     void getAbsolute(int32_t* words)const;
 
+    /** Return the logical (bit-wise) "and" of a BigInteger and an int. */
+    static BigInteger And(const BigInteger&x,const int32_t&y);
+
+    static void swap(BigInteger&x,BigInteger&y);
+
     static BigInteger neg(const BigInteger& x);
     static BigInteger times(const BigInteger& x,int32_t y);
     static BigInteger times(const BigInteger&x,const BigInteger& y);
@@ -97,9 +102,14 @@ public:
     bool isNegative()const;
     void show();
     BigInteger modInverse(const BigInteger &val)const;
-    BigInteger modPow(const BigInteger &exponent)const;
-
+    BigInteger modPow(const BigInteger &exponent,const BigInteger& m)const;
+    bool isZero()const;
+    bool isOne()const;
     int64_t longValue()const;
+    BigInteger negate();
+    BigInteger And(const BigInteger&y)const;
+    BigInteger shiftRight(const int32_t&n)const;
+    BigInteger shiftLeft(const int32_t&n)const;
 
     /** Destructively negate this. */
     void setNegative();

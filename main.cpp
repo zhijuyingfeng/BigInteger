@@ -6,9 +6,9 @@
 
 int main()
 {
-    BigInteger a("12345678901234567890");
-    BigInteger b("1234567889");
-    BigInteger c=a.divide(b);
+    BigInteger a("413");
+    BigInteger b("780");
+    BigInteger c=a.modInverse(b);
     c.show();
     return 0;
 }
