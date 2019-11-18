@@ -23,9 +23,9 @@ private:
     void setShiftLeft(const BigInteger&x,int32_t count);
     void setShiftRight(const BigInteger&x,int32_t count);
 
-    const static BigInteger ONE;
-    const static BigInteger ZERO;
-    const static BigInteger TEN;
+    /** Calculate Greatest Common Divisor for non-negative ints. */
+    static int32_t gcd(const int32_t&a,const int32_t&b);
+
     const static int32_t FLOOR=1;
     const static int32_t CEILING=2;
     const static int32_t TRUNCATE=3;
@@ -83,6 +83,7 @@ private:
     static BigInteger times(const BigInteger&x,const BigInteger& y);
     static void divide(int64_t x,int64_t y,BigInteger* quotient,BigInteger *remainder,const int32_t&rounding_mode);
     static BigInteger shift(const BigInteger&val,const int32_t&count);
+    static BigInteger abs(const BigInteger&x);
 
     /** Divide two integers, yielding quotient and remainder.
     * @param x the numerator in the division
@@ -94,6 +95,10 @@ private:
     */
     static void divide(const BigInteger&x,const BigInteger&y,BigInteger* quotient,BigInteger *remainder,const int32_t&rounding_mode);
 public:
+    const static BigInteger ONE;
+    const static BigInteger ZERO;
+    const static BigInteger TEN;
+
     BigInteger();
     ~BigInteger();
     BigInteger(const BigInteger&val);
@@ -115,6 +120,8 @@ public:
     BigInteger And(const BigInteger&y)const;
     BigInteger shiftRight(const int32_t&n)const;
     BigInteger shiftLeft(const int32_t&n)const;
+    BigInteger abs()const;
+    BigInteger gcd(const BigInteger& b)const;
 
     /** Destructively negate this. */
     void setNegative();

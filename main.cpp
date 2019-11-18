@@ -21,10 +21,9 @@ int main()
                              "566914528483955014073455660937229038263";
 
     BigInteger p(p_string),q(q_string);
-    clock_t t=clock();
-    BigInteger c=p.modInverse(q);
-    t=clock()-t;
-    c.show();
-    printf("%lf\n",1000.0*t/CLOCKS_PER_SEC);
+    BigInteger p_1=p.subtract(BigInteger::ONE);
+    BigInteger q_1=q.subtract(BigInteger::ONE);
+    BigInteger g=p_1.gcd(q_1);
+    g.show();
     return 0;
 }

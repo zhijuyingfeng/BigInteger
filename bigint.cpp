@@ -1009,3 +1009,25 @@ int32_t BigInteger::compareTo(const BigInteger &x, const BigInteger &y)
         return (xlen>ylen)!=x_negative?1:-1;
     return MPN::cmp(x.words,y.words,xlen);
 }
+
+int32_t BigInteger::gcd(const int32_t&a,const int32_t&b)
+{
+    int32_t temp=a%b;
+    return temp==0?b:gcd(b,temp);
+}
+
+BigInteger BigInteger::abs(const BigInteger &x)
+{
+    return x.isNegative()?neg(x):x;
+}
+
+BigInteger BigInteger::abs()const
+{
+    return abs(*this);
+}
+
+BigInteger BigInteger::gcd(const BigInteger& b)const
+{
+    BigInteger temp=this->mod(b);
+    return temp.isZero()?b:b.gcd(temp);
+}
