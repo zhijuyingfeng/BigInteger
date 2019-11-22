@@ -814,7 +814,7 @@ void BigInteger::setShift(const BigInteger &x, const int32_t &count)
     if(count>0)
         setShiftLeft(x,count);
     else
-        setShiftRight(x,count);
+        setShiftRight(x,-count);
 }
 
 void BigInteger::setShiftRight(const BigInteger &x, int32_t count)
