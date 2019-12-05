@@ -988,6 +988,8 @@ BigInteger BigInteger::modInverse(const BigInteger &val) const
 {
     BigInteger b1=ZERO,b2=ONE;
     BigInteger p1=val,p2=*this;
+    if(p2.compareTo(p1)>0)
+        p2=p2.mod(p1);
     BigInteger q;
     while(!p2.isOne())
     {
