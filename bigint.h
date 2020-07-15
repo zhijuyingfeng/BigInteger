@@ -121,10 +121,18 @@ public:
     BigInteger shiftRight(const int32_t&n)const;
     BigInteger shiftLeft(const int32_t&n)const;
     BigInteger abs()const;
+
+    //Assume *this and b is greater than b
     BigInteger gcd(const BigInteger& b)const;
+
+    int32_t mod3()const;
 
     /** Destructively negate this. */
     void setNegative();
+    int32_t compareTo(const BigInteger&val)const;
+
+    BigInteger(const int32_t*data,const int32_t& len);
+    void getWords(int32_t* data)const;
 };
 
 #endif // BIGINT_H

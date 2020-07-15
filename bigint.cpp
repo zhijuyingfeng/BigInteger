@@ -7,7 +7,7 @@
 BigInteger::BigInteger()
 {
     this->ival=0;
-   this->words=NULL;
+    this->words=NULL;
 }
 
 BigInteger::BigInteger(const int&val)
@@ -26,7 +26,7 @@ BigInteger::BigInteger(const char* val)
     int32_t len=static_cast<int32_t>(strlen(val));
     if(len<=15)
     {
-        this->words = NULL;
+        this->words=NULL;
         *this=valueOf(atoll(val));
         return;
     }
@@ -90,7 +90,6 @@ BigInteger::~BigInteger()
 const BigInteger BigInteger::ONE(1);
 const BigInteger BigInteger::ZERO(0);
 const BigInteger BigInteger::TEN(10);
-const BigInteger BigInteger::TWO(2);
 
 bool BigInteger::isNegative() const
 {
@@ -553,6 +552,7 @@ void BigInteger::set(const int64_t &y)
         this->words=NULL;
         return;
     }
+    this->ival=2;
     this->words=new int32_t[2];
     this->words[0]=i;
     this->words[1]=(y>>32)&NEGATIVE_ONE;
@@ -722,8 +722,8 @@ void BigInteger::divide(const BigInteger &x, const BigInteger &y, BigInteger *qu
                 remainder->setNegative();
         }
     }
-   delete[]xwords;
-   delete[]ywords;
+   delete[] xwords;
+   delete[] ywords;
 }
 
 int64_t BigInteger::longValue() const
@@ -732,9 +732,10 @@ int64_t BigInteger::longValue() const
         return this->ival;
     if(this->ival==1)
         return this->words[0];
-
-    return (static_cast<int64_t>(this->words[1])<<32)
+    if(this->ival==2)
+        return (static_cast<int64_t>(this->words[1])<<32)
                 +(static_cast<int64_t>(this->words[0])&NEGATIVE_ONE_64);
+    return 0;
 }
 
 void BigInteger::getAbsolute(int32_t *w)const
@@ -989,8 +990,6 @@ BigInteger BigInteger::modInverse(const BigInteger &val) const
 {
     BigInteger b1=ZERO,b2=ONE;
     BigInteger p1=val,p2=*this;
-    if(p2.compareTo(p1)>0)
-            p2=p2.mod(p1);
     BigInteger q;
     while(!p2.isOne())
     {
@@ -1040,42 +1039,17 @@ BigInteger BigInteger::gcd(const BigInteger& b)const
     return temp.isZero()?b:b.gcd(temp);
 }
 
-BigInteger::BigInteger (const void*data,const int32_t& len)
-{
-    this->ival=(len>>2)+((len&3)?1:0);//words needed
-    this->words=new int32_t[this->ival];
-    memcpy(this->words,data,static_cast<size_t>(len));
-}
-
-BigInteger BigInteger::randomNumber(const int32_t &bitsLength)
-{
-    if(bitsLength<=0)
-        return ZERO;
-    int32_t len=(bitsLength>>3)+((bitsLength&7)?1:0);//bytes needed
-    BigInteger ans(ZERO);
-    ans.ival=(len>>2)+((len&3)?1:0);//words needed
-    ans.words=new int32_t[ans.ival];
-    for(int32_t i=0;i<ans.ival;i++)
-    {
-        uint16_t a=static_cast<uint16_t>(rand());
-        uint16_t b=static_cast<uint16_t>(rand());
-        ans.words[i]=a;
-        ans.words[i]=(a<<16)^b;
-    }
-    int32_t r=bitsLength&31;
-    r=32-r;
-    uint32_t temp=static_cast<uint32_t>(ans.words[ans.ival-1]);
-    temp<<=r;
-    temp>>=r;
-    ans.words[ans.ival-1]=static_cast<int32_t>(temp);
-    return ans;
-}
-
-int32_t BigInteger::bitLength() const
+int32_t BigInteger::mod3() const
 {
     if(!this->words)
-        return MPN::intLength(this->ival);
-    return MPN::intLength(this->words,this->ival);
+        return this->ival%3;
+    int32_t ans=0;
+    for(int32_t i=0;i<this->ival;i++)
+    {
+        ans+=static_cast<uint32_t>(this->words[i])%3;
+    }
+    ans%=3;
+    return ans;
 }
 
 int32_t BigInteger::compareTo(const BigInteger &val)const
@@ -1083,15 +1057,28 @@ int32_t BigInteger::compareTo(const BigInteger &val)const
     return compareTo(*this,val);
 }
 
-
-const int32_t* BigInteger::getWords()
+BigInteger::BigInteger(const int32_t*data,const int32_t& len)
 {
-    return this->words;
+    if(1==len)
+    {
+        *this=valueOf(data[0]);
+        return;
+    }
+    if(2==len)
+    {
+        int64_t high=static_cast<int64_t>(data[1]);
+        int64_t low=static_cast<int64_t>(data[0])&NEGATIVE_ONE_64;
+        *this=valueOf((high<<32)+low);
+        return;
+    }
+    this->ival=wordsNeeded(data,len);
+    this->words=new int32_t[this->ival];
+    memcpy(this->words,data,sizeof(int32_t)*static_cast<uint32_t>(this->ival));
+    this->canonicalize();
 }
 
-int32_t BigInteger::intValue() const
+void BigInteger::getWords(int32_t *data) const
 {
-    if(!this->words)
-        return this->ival;
-    return this->words[0];
+    if(this->words)
+        memcpy(data,this->words,sizeof(int32_t)*static_cast<uint32_t>(this->ival));
 }

@@ -23,7 +23,7 @@ int main()
     BigInteger p(p_string),q(q_string);
     BigInteger p_1=p.subtract(BigInteger::ONE);
     BigInteger q_1=q.subtract(BigInteger::ONE);
-    BigInteger g=p_1.gcd(q_1);
+    BigInteger g=p.multiply(q);
     g.show();
     return 0;
 }
